@@ -2,12 +2,12 @@
 
 for F in "$@"
 do
-	if [ ! -f $F ]; then
+	if [ ! -f $F ] && [ ! -d $F ]; then
 		echo "$F not found";
 		continue;
 	fi
 	OLD="$F.old"
-	if [ -f $OLD ]; then 
+	if [ -f $OLD ] || [ -d $OLD ]; then 
 		$0 "$OLD"
 	fi
 	echo "copying $F to $OLD"
