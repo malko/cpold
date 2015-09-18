@@ -1,4 +1,5 @@
 #!/bin/sh
+extensions=("old" "OLD" "back" "back" "backup" "BAK" "cpy" "copy" "other" "OK")
 
 for F in "$@"
 do
@@ -6,8 +7,13 @@ do
 		echo "$F not found";
 		continue;
 	fi
-	OLD="$F.old"
-	if [ -f $OLD ] || [ -d $OLD ]; then 
+
+	# Seed random generator
+	RANDOM=$$$(date +%s)
+	extension=${extensions[$RANDOM % ${#extensions[@]} ]}
+
+	OLD="$F.$extension"
+	if [ -f $OLD ] || [ -d $OLD ]; then
 		$0 "$OLD"
 	fi
 	echo "copying $F to $OLD"
