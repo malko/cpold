@@ -1,15 +1,76 @@
 #!/bin/sh
 
+if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$#" -eq 0 ]; then
+	cat <<-EOF
+cpold - the dumbest versioning system ever
+
+usage:
+cpold myfileOrFolder                      backup myfileOrFolder to myfileOrFolder.old
+                                          (cascading older backups deeper)
+cpold --unold [-f] myfileOrFolder.old...  restore myfileOrFolder.old onto whatever's left
+                                          after stripping its .old's
+                                          (myfile.old.old.old restores onto myfile)
+cpold --help       show this help
+
+options:
+-u, --unold   restore instead of backup: pass the exact backup path you want back,
+							e.g. myfile.old.old.old restores onto myfile
+-f, --force   skip the overwrite confirmation prompt when restoring
+EOF
+exit 0
+fi
+
+if [ "$1" = "-u" ] || [ "$1" = "--unold" ]; then
+	shift
+	FORCE=0
+	if [ "$1" = "-f" ] || [ "$1" = "--force" ]; then
+		FORCE=1
+		shift
+	fi
+	for OLD in "$@"
+	do
+		while [ "${OLD%/}" != "$OLD" ]; do OLD=${OLD%/}; done
+		if [ ! -f "$OLD" ] && [ ! -d "$OLD" ]; then
+			echo "$OLD not found";
+			continue;
+		fi
+		F="$OLD"
+		STRIPPED=0
+		while [ "${F%.old}" != "$F" ]; do
+			F=${F%.old}
+			STRIPPED=$((STRIPPED+1))
+		done
+		if [ "$STRIPPED" -eq 0 ]; then
+			echo "$OLD does not end with .old, nothing to restore";
+			continue;
+		fi
+		if [ "$FORCE" -ne 1 ]; then
+			printf '%s' "restore $OLD onto $F, overwriting $F ? [y/N] "
+			read -r ANSWER
+			case "$ANSWER" in
+				y|Y|yes|YES) ;;
+				*) echo "skipping $F"; continue ;;
+			esac
+		fi
+		echo "restoring $OLD to $F"
+		rm -rf "$F"
+		cp -rp "$OLD" "$F"
+	done
+	exit 0
+fi
+
 for F in "$@"
 do
-	if [ ! -f $F ] && [ ! -d $F ]; then
+	while [ "${F%/}" != "$F" ]; do F=${F%/}; done
+	if [ ! -f "$F" ] && [ ! -d "$F" ]; then
 		echo "$F not found";
 		continue;
 	fi
 	OLD="$F.old"
-	if [ -f $OLD ] || [ -d $OLD ]; then 
-		$0 "$OLD"
+	if [ -f "$OLD" ] || [ -d "$OLD" ]; then
+		"$0" "$OLD"
 	fi
 	echo "copying $F to $OLD"
-	cp -rp $F $OLD
+	rm -rf "$OLD"
+	cp -rp "$F" "$OLD"
 done
